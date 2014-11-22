@@ -8,12 +8,12 @@ backend default {
 sub vcl_recv {
     set req.backend = default;
 
-    {{range .}}
-        if (req.http.host == "{{.Name}}") {
-            {{range .Paths}}
-                if (req.url ~ "^{{.Path}}") {
-                    set req.backend = {{.Director}};
-                    include "/etc/varnish/vcl/{{.VCL}}/recv.vcl";
+    {{range $index, $host := .}}
+        {{if $index}}else{{end}} if (req.http.host == "{{$host.Name}}") {
+            {{range $index, $value := $host.Paths}}
+                {{if $index}}else{{end}} if (req.url ~ "^{{$value.Path}}") {
+                    set req.backend = {{$value.Director}};
+                    include "/etc/varnish/vcl/{{$value.VCL}}/recv.vcl";
                 }
             {{end}}
         }
@@ -21,11 +21,11 @@ sub vcl_recv {
 }
 
 sub vcl_fetch {
-    {{range .}}
-        if (req.http.host == "{{.Name}}") {
-            {{range .Paths}}
-                if (req.url ~ "^{{.Path}}") {
-                    include "/etc/varnish/vcl/{{.VCL}}/fetch.vcl";
+    {{range $index, $host := .}}
+        {{if $index}}else{{end}} if (req.http.host == "{{$host.Name}}") {
+            {{range $index, $value := $host.Paths}}
+                {{if $index}}else{{end}} if (req.url ~ "^{{$value.Path}}") {
+                    include "/etc/varnish/vcl/{{$value.VCL}}/fetch.vcl";
                 }
             {{end}}
         }
@@ -33,11 +33,11 @@ sub vcl_fetch {
 }
 
 sub vcl_deliver {
-    {{range .}}
-        if (req.http.host == "{{.Name}}") {
-            {{range .Paths}}
-                if (req.url ~ "^{{.Path}}") {
-                    include "/etc/varnish/vcl/{{.VCL}}/deliver.vcl";
+    {{range $index, $host := .}}
+        {{if $index}}else{{end}} if (req.http.host == "{{$host.Name}}") {
+            {{range $index, $value := $host.Paths}}
+                {{if $index}}else{{end}} if (req.url ~ "^{{$value.Path}}") {
+                    include "/etc/varnish/vcl/{{$value.VCL}}/deliver.vcl";
                 }
             {{end}}
         }
@@ -45,11 +45,11 @@ sub vcl_deliver {
 }
 
 sub vcl_hit {
-    {{range .}}
-        if (req.http.host == "^{{.Name}}") {
-            {{range .Paths}}
-                if (req.url ~ "^{{.Path}}") {
-                    include "/etc/varnish/vcl/{{.VCL}}/hit.vcl";
+    {{range $index, $host := .}}
+        {{if $index}}else{{end}} if (req.http.host == "{{$host.Name}}") {
+            {{range $index, $value := $host.Paths}}
+                {{if $index}}else{{end}} if (req.url ~ "^{{$value.Path}}") {
+                    include "/etc/varnish/vcl/{{$value.VCL}}/hit.vcl";
                 }
             {{end}}
         }
@@ -57,11 +57,11 @@ sub vcl_hit {
 }
 
 sub vcl_miss {
-    {{range .}}
-        if (req.http.host == "^{{.Name}}") {
-            {{range .Paths}}
-                if (req.url ~ "^{{.Path}}") {
-                    include "/etc/varnish/vcl/{{.VCL}}/miss.vcl";
+    {{range $index, $host := .}}
+        {{if $index}}else{{end}} if (req.http.host == "{{$host.Name}}") {
+            {{range $index, $value := $host.Paths}}
+                {{if $index}}else{{end}} if (req.url ~ "^{{$value.Path}}") {
+                    include "/etc/varnish/vcl/{{$value.VCL}}/miss.vcl";
                 }
             {{end}}
         }
