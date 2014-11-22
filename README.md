@@ -21,6 +21,7 @@ This repository contains a working Dockerfile, it exposes the web interface on p
 The container can be customized with these environment variables:
 
 Name | Default Value | Description
+--- | --- | ---
 ETCD_KEY | /varnish | Which Etcd path to watch for configuration
 ETCD_PEER | http://127.0.0.1:4001 | The Etcd peer to connect to
 OUT_DIRECTORS | /etc/varnish/directors.vcl | Where to output the directors
