@@ -5,6 +5,11 @@ backend default {
     .port = "65535";
 }
 
+acl purge {
+    "localhost";
+    "10.0.0.0"/24;
+}
+
 sub vcl_recv {
     set req.backend = default;
 
