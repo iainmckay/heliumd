@@ -2,7 +2,7 @@
 
 [Etcd](https://github.com/coreos/etcd) aware daemon for configuring [Varnish](https://www.varnish-cache.org/)
 
-Heliumd stores Varnish configuration inside Etcd, listens for changes and reconfigures Varnish. It is intended to be used in a Dockerized environment and can be used alongside a service such as [registrator](https://github.com/progrium/registrator/) to add and remove containers as they are started and stopped.
+Heliumd stores Varnish configuration inside Etcd, listens for changes and reconfigures Varnish. It is intended to be used in a Dockerized environment and can be used alongside a service such as [registrator](https://github.com/progrium/registrator/).
 
 You can find a basic Docker project to get up and running [here](https://github.com/iainmckay/docker-heliumd).
 
@@ -16,7 +16,7 @@ To start Heliumd you must provide the address to a working Etcd instance.
     
 ## Adding hosts and upstreams
 
-By default Heliumd will watch `/varnish` in Etcd for host and upstream changes. The expected format for host and upstreams is the same used in [Vulcand](https://github.com/mailgun/vulcand) so it is possible to run this in conjunction with Vulcand and use the same setup of hosts and upstreams.
+By default Heliumd will watch `/varnish` in Etcd for host and upstream changes. The expected format for host and upstreams is the same used in [Vulcand](https://github.com/mailgun/vulcand) so it is possible to run this in conjunction with Vulcand.
 
 ### Adding hosts
 
@@ -44,7 +44,7 @@ Upstreams are a collection of backends to send traffic to.
 
 Continuing the `some-super-service` example in the previous section. Here we register 3 backends on 3 different ports. Only HTTP is supported.
 
-You can use a helper container such as [registrator](https://github.com/progrium/registrator/) to manage these automatically. [PR #53](https://github.com/progrium/registrator/pull/53) adds support for the Vulcand format the Heliumd uses, it will hopefully be merged in to master soon.
+You can use a helper container such as [registrator](https://github.com/progrium/registrator/) to manage these automatically. [PR #53](https://github.com/progrium/registrator/pull/53) adds support for the Vulcand format that Heliumd uses, it will hopefully be merged in to master soon.
 
 ## SSL
 
