@@ -66,8 +66,8 @@ func assert(err error) {
 	}
 }
 
-func parse(hosts *etcd.Response, upstreams *etcd.Response) Def {
-	def := Def{
+func parse(hosts *etcd.Response, upstreams *etcd.Response) *Def {
+	def := &Def{
 		Hosts:     make([]*Host, 0),
 		Directors: make(map[string]*Director),
 	}
@@ -256,22 +256,99 @@ func parseEndpoint(endpoint string) (address string, port int, err error) {
 	return
 }
 
-func process(client *etcd.Client, vclTemplate *template.Template, upstreamTemplate *template.Template) {
+func process(client *etcd.Client) *Def {
 	if hosts, err := client.Get(*prefix+"/hosts", true, true); err != nil {
 		Error.Println("Reading hosts from etcd,", err.Error())
 	} else if upstreams, err := client.Get(*prefix+"/upstreams", true, true); err != nil {
 		Error.Println("Reading upstreams from etcd,", err.Error())
 	} else {
-		def := parse(hosts, upstreams)
+		return parse(hosts, upstreams)
+	}
 
-		if err = writeHosts(vclTemplate, def.Hosts); err != nil {
-			Error.Println("Writing hosts,", err.Error())
-		} else if err = writeDirectors(upstreamTemplate, def.Directors); err != nil {
-			Error.Println("Writing directors,", err.Error())
-		} else if err = reloadVarnish(); err != nil {
-			Error.Println("Trying to reload varnish,", err.Error())
+	return nil
+}
+
+func write(def *Def, vclTemplate *template.Template, upstreamTemplate *template.Template) {
+	if err := writeHosts(vclTemplate, def.Hosts); err != nil {
+		Error.Println("Writing hosts,", err.Error())
+	} else if err = writeDirectors(upstreamTemplate, def.Directors); err != nil {
+		Error.Println("Writing directors,", err.Error())
+	} else if err = reloadVarnish(); err != nil {
+		Error.Println("Trying to reload varnish,", err.Error())
+	}
+}
+
+func processAndWrite(client *etcd.Client, vclTemplate *template.Template, upstreamTemplate *template.Template) *Def {
+	def := process(client)
+
+	if def != nil {
+		write(def, vclTemplate, upstreamTemplate)
+	}
+
+	return def
+}
+
+func compare(current *Def, previous *Def) bool {
+	if previous == nil {
+		return true
+	}
+
+	if len(current.Hosts) != len(previous.Hosts) {
+		return true
+	} else if len(current.Directors) != len(previous.Directors) {
+		return true
+	}
+
+	// the order of the two defs should always be the same this is safe to test like this
+	for i := 0; i < len(current.Hosts); i++ {
+		if current.Hosts[i].Name != previous.Hosts[i].Name {
+			return true
+		}
+
+		if len(current.Hosts[i].Paths) != len(previous.Hosts[i].Paths) {
+			return true
+		}
+
+		for j := 0; j < len(current.Hosts[i].Paths); j++ {
+			if current.Hosts[i].Paths[j].Director != previous.Hosts[i].Paths[j].Director {
+				return true
+			}
+
+			if current.Hosts[i].Paths[j].Path != previous.Hosts[i].Paths[j].Path {
+				return true
+			}
+
+			if current.Hosts[i].Paths[j].VCL != previous.Hosts[i].Paths[j].VCL {
+				return true
+			}
 		}
 	}
+
+	for i, _ := range current.Directors {
+		if current.Directors[i].Name != previous.Directors[i].Name {
+			return true
+		}
+
+		if len(current.Directors[i].Backends) != len(previous.Directors[i].Backends) {
+			return true
+		}
+
+		for j := 0; j < len(current.Directors[i].Backends); j++ {
+			if current.Directors[i].Backends[j].Address != previous.Directors[i].Backends[j].Address {
+				return true
+			}
+
+			if current.Directors[i].Backends[j].Name != previous.Directors[i].Backends[j].Name {
+				return true
+			}
+
+			if current.Directors[i].Backends[j].Port != previous.Directors[i].Backends[j].Port {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func main() {
@@ -305,15 +382,22 @@ func main() {
 	watchChan := make(chan *etcd.Response)
 	client := etcd.NewClient(urls)
 
-	process(client, vclTemplate, directorTemplate)
+	previousDef := processAndWrite(client, vclTemplate, directorTemplate)
 
 	go client.Watch(*prefix, 0, true, watchChan, nil)
 
 	Info.Printf("Listening for etcd events from %s%s...", uri.String(), *prefix)
 
 	for _ = range watchChan {
-		Info.Println("Change detected...")
-		process(client, vclTemplate, directorTemplate)
+		def := process(client)
+		hasDiff := compare(def, previousDef)
+
+		if def != nil && hasDiff == true {
+			Info.Println("Change detected...")
+			write(def, vclTemplate, directorTemplate)
+		}
+
+		previousDef = def
 	}
 
 	Error.Fatal("etcd watch loop closed")
